@@ -1,0 +1,57 @@
+dataset:
+
+  oil:
+    images: "D:/SIH_Dataset/Part_I/01_Train_Val_Oil_Spill_images/Oil"
+    masks: "D:/SIH_Dataset/Part_I/01_Train_Val_Oil_Spill_mask/Mask_oil"
+
+  no_oil:
+    images: "D:/SIH_Dataset/Part_II/01_Train_Val_No_Oil_Images/No_oil"
+    masks: "D:/SIH_Dataset/Part_II/01_Train_Val_No_Oil_mask/Mask_no_oil"
+
+  lookalike:
+    images: "D:/SIH_Dataset/Part_II/01_Train_Val_Lookalike_images/Lookalike"
+    masks: "D:/SIH_Dataset/Part_II/01_Train_Val_Lookalike_mask/Mask_lookalike"
+
+
+preprocessing:
+  channels: [VV, VH]
+
+  patch_size: 512
+  overlap: 128
+
+  normalize: true
+
+  normalization:
+    vv_min: -44.086868
+    vv_max: -12.757253
+    vh_min: -35.326511
+    vh_max: -6.280492
+
+  invalid_value: 0
+
+  patch_sampling:
+    min_oil_pixels: 1
+
+    max_background_patches_per_image: 5
+    max_no_oil_patches_per_image: 5
+    max_lookalike_patches_per_image: 5
+
+    keep_all_oil_patches: true
+
+
+training:
+
+  batch_size: 4
+  epochs: 50
+  learning_rate: 0.0001
+
+  loss:
+    type: "bce_dice"
+
+  checkpoint:
+    save_best: true
+    path: "models/best_unet.pth"
+
+
+device:
+  type: "auto"
