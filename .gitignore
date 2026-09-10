@@ -3,7 +3,6 @@
 # =========================
 __pycache__/
 *.py[cod]
-*$py.class
 *.so
 
 # Virtual environments
@@ -27,58 +26,18 @@ ENV/
 .ipynb_checkpoints/
 
 # =========================
-# Data
-# =========================
-# Raw / processed datasets
-data/raw/
-data/processed/
-
-# Temporary dataset patches
-data/patches/
-
-# =========================
-# Model artifacts
-# =========================
-models/
-*.pt
-*.pth
-*.ckpt
-*.onnx
-*.h5
-*.pkl
-*.pickle
-
-# =========================
 # Generated outputs
 # =========================
-outputs/masks/
-outputs/predictions/
-outputs/visualizations/
+outputs/
 
 # =========================
-# Logs / experiment tracking
+# Dataset files
 # =========================
-logs/
-*.log
-runs/
-wandb/
+# Uncomment if datasets should NOT be stored in Git
+# data/raw/
+# data/processed/
 
 # =========================
-# Python packaging
+# OS
 # =========================
-*.egg-info/
-dist/
-build/
-
-# =========================
-# Environment / secrets
-# =========================
-.env
-.env.*
-!.env.example
-
-# =========================
-# OS files
-# =========================
-Thumbs.db
 .DS_Store
