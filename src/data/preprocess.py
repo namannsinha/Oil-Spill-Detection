@@ -133,6 +133,13 @@ def normalize_band(
         maximum - minimum
     )
 
+    # Protect against floating-point rounding.
+    band = np.clip(
+        band,
+        0.0,
+        1.0
+    )
+
     # Invalid pixels are explicitly set to 0.
     band[invalid_mask] = 0.0
 
