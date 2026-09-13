@@ -177,119 +177,159 @@ def scene_geolocation(image_path: Path) -> dict:
             "scene_top": bounds.top,
             "scene_latitude": scene_latitude,
             "scene_longitude": scene_longitude,
+            "transform" : src.transform,
         }
 
 
-def calculate_oil_statistics(mask_path: Path) -> dict:
+def calculate_oil_statistics(mask_path, image_transform):
     """
-    Calculate oil pixel statistics and oil centroid.
+    Calculate ground-truth oil statistics.
 
-    Mask convention:
-        0 = background
-        >0 = oil
+    Returns:
+        - oil pixel count
+        - total pixel count
+        - oil percentage
+        - geodesic oil area in km²
+        - oil centroid latitude
+        - oil centroid longitude
+
+    The mask has no georeferencing, so the corresponding
+    Sentinel-1 image transform is used.
     """
+
+    from pyproj import Geod
+
+    geod = Geod(ellps="WGS84")
 
     with rasterio.open(mask_path) as src:
         mask = src.read(1)
 
-        transform = src.transform
+    oil_pixels = mask == 1
 
-    oil = mask > 0
+    total_pixels = mask.size
+    oil_pixel_count = int(oil_pixels.sum())
 
-    total_pixels = oil.size
-    oil_pixels = int(oil.sum())
+    # ------------------------------------------------------------
+    # Oil percentage
+    # ------------------------------------------------------------
 
     oil_percent = (
-        oil_pixels / total_pixels * 100.0
-        if total_pixels
+        oil_pixel_count / total_pixels * 100.0
+        if total_pixels > 0
         else 0.0
     )
 
-    if oil_pixels == 0:
+    # ------------------------------------------------------------
+    # Empty mask
+    # ------------------------------------------------------------
+
+    if oil_pixel_count == 0:
         return {
             "oil_pixels": 0,
+            "total_pixels": total_pixels,
             "oil_percent": 0.0,
+            "oil_area_km2": 0.0,
             "oil_latitude": None,
             "oil_longitude": None,
-            "oil_area_km2": 0.0,
         }
 
-    rows, cols = np.where(oil)
+    # ------------------------------------------------------------
+    # Oil centroid
+    # ------------------------------------------------------------
 
-    # Pixel center coordinates.
-    xs, ys = rasterio.transform.xy(
-        transform,
-        rows,
-        cols,
+    oil_rows, oil_cols = np.where(oil_pixels)
+
+    mean_row = float(oil_rows.mean())
+    mean_col = float(oil_cols.mean())
+
+    oil_longitude, oil_latitude = rasterio.transform.xy(
+        image_transform,
+        mean_row,
+        mean_col,
         offset="center",
     )
 
-    xs = np.asarray(xs, dtype=np.float64)
-    ys = np.asarray(ys, dtype=np.float64)
-
-    oil_longitude = float(xs.mean())
-    oil_latitude = float(ys.mean())
-
-    # --------------------------------------------------------
-    # Estimate geographic pixel area.
+    # ------------------------------------------------------------
+    # Geodesic oil area
+    # ------------------------------------------------------------
     #
-    # Dataset is EPSG:4326, therefore pixel dimensions are in
-    # degrees. Approximate each row's pixel area on WGS84.
-    # --------------------------------------------------------
+    # The images are in geographic coordinates (EPSG:4326).
+    # Pixel area therefore changes slightly with latitude.
+    #
+    # Calculate the geodesic area of one pixel for every row
+    # containing oil, then multiply by the number of oil pixels
+    # in that row.
+    # ------------------------------------------------------------
 
-    pixel_width_deg = abs(transform.a)
-    pixel_height_deg = abs(transform.e)
-
-    latitudes = np.asarray(
-        rasterio.transform.xy(
-            transform,
-            rows,
-            np.zeros_like(rows),
-            offset="center",
-        )[1],
-        dtype=np.float64,
+    unique_rows, row_counts = np.unique(
+        oil_rows,
+        return_counts=True,
     )
 
-    # WGS84 approximation.
-    lat_rad = np.radians(latitudes)
+    total_oil_area_m2 = 0.0
 
-    earth_radius = 6378137.0
+    for row, count in zip(unique_rows, row_counts):
 
-    # Longitude degree length.
-    meters_per_degree_lon = (
-        np.pi
-        * earth_radius
-        * np.cos(lat_rad)
-        / 180.0
-    )
+        # Pixel corners for column 0 in this row.
+        lon_ul, lat_ul = rasterio.transform.xy(
+            image_transform,
+            int(row),
+            0,
+            offset="ul",
+        )
 
-    # Latitude degree length.
-    meters_per_degree_lat = (
-        np.pi
-        * earth_radius
-        / 180.0
-    )
+        lon_ur, lat_ur = rasterio.transform.xy(
+            image_transform,
+            int(row),
+            0,
+            offset="ur",
+        )
 
-    pixel_areas_m2 = (
-        pixel_width_deg
-        * meters_per_degree_lon
-        * pixel_height_deg
-        * meters_per_degree_lat
-    )
+        lon_lr, lat_lr = rasterio.transform.xy(
+            image_transform,
+            int(row),
+            0,
+            offset="lr",
+        )
 
-    oil_area_km2 = (
-        float(pixel_areas_m2.sum())
-        / 1_000_000.0
-    )
+        lon_ll, lat_ll = rasterio.transform.xy(
+            image_transform,
+            int(row),
+            0,
+            offset="ll",
+        )
+
+        pixel_area_m2, _ = geod.polygon_area_perimeter(
+            [
+                lon_ul,
+                lon_ur,
+                lon_lr,
+                lon_ll,
+            ],
+            [
+                lat_ul,
+                lat_ur,
+                lat_lr,
+                lat_ll,
+            ],
+        )
+
+        total_oil_area_m2 += abs(pixel_area_m2) * int(count)
+
+    oil_area_km2 = total_oil_area_m2 / 1_000_000.0
+
+    # ------------------------------------------------------------
+    # Return
+    # ------------------------------------------------------------
 
     return {
-        "oil_pixels": oil_pixels,
+        "oil_pixels": oil_pixel_count,
+        "total_pixels": total_pixels,
         "oil_percent": oil_percent,
-        "oil_latitude": oil_latitude,
-        "oil_longitude": oil_longitude,
         "oil_area_km2": oil_area_km2,
+        "oil_latitude": float(oil_latitude),
+        "oil_longitude": float(oil_longitude),
     }
-
 
 def calculate_event_score(
     oil_percent: float,
@@ -416,9 +456,10 @@ def main():
                 image_path
             )
 
-            oil = calculate_oil_statistics(
-                mask_path
-            )
+            oil =  calculate_oil_statistics(
+                    mask_path,
+                    geo["transform"]
+                )
 
             dataset_name = metadata.get(
                 "DATASET_NAME"

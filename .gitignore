@@ -1,10 +1,10 @@
 # ==========================================
 # Python
 # ==========================================
-
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
 # Virtual environments
 .venv/
@@ -12,99 +12,126 @@ venv/
 env/
 ENV/
 
-# ==========================================
-# IDE / Editor
-# ==========================================
-
-.vscode/
-.idea/
+# Python packaging
+*.egg-info/
+dist/
+build/
+.eggs/
 
 # ==========================================
 # Environment / Secrets
 # ==========================================
-
 .env
 .env.*
 !.env.example
 
 # ==========================================
-# Model Checkpoints / Weights
+# Jupyter Notebook
 # ==========================================
+.ipynb_checkpoints/
 
-*.pth
+# ==========================================
+# IDE / Editor
+# ==========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ==========================================
+# Machine Learning Models
+# ==========================================
+# Large trained model files
 *.pt
-*.ckpt
+*.pth
 *.onnx
 *.h5
 *.keras
+*.ckpt
+*.safetensors
+
+# Keep model directory structure but ignore weights
+models/*
+!models/.gitkeep
 
 # ==========================================
-# Dataset / Large Data Files
+# Dataset / Raw Data
 # ==========================================
+# Ignore large datasets
+data/raw/
+data/processed/
+data/datasets/
 
-# Ignore raw and processed datasets
-data/**/*.tif
-data/**/*.tiff
-data/**/*.png
-data/**/*.jpg
-data/**/*.jpeg
-data/**/*.npy
-data/**/*.npz
-data/**/*.h5
+# Sentinel / satellite imagery
+*.tif
+*.tiff
+*.jp2
+*.nc
+*.hdf
+*.h5
 
-# Cache
-data/**/__pycache__/
-data/**/cache/
+# AIS / environmental downloaded data
+data/environment/
+data/ais/
+
+# Temporary downloaded files
+*.zip
+*.tar
+*.tar.gz
 
 # ==========================================
 # Generated Outputs
 # ==========================================
+outputs/
 
-outputs/predictions/
-outputs/probabilities/
-outputs/threshold_analysis/
-outputs/visualizations/
+# Keep output folders but not generated files
+!outputs/.gitkeep
+
+# ==========================================
+# Predictions / Evaluation Artifacts
+# ==========================================
+outputs/evaluation/predictions/
+outputs/evaluation/probabilities/
+outputs/evaluation/threshold_analysis/
+outputs/evaluation/visualizations/
 
 outputs/hindcast/predictions/
 outputs/hindcast/visualizations/
 
-outputs/environmental/
-
-# Generated images
-outputs/**/*.png
-outputs/**/*.jpg
-outputs/**/*.jpeg
+# ==========================================
+# Generated CSV / Reports
+# ==========================================
+outputs/**/*.csv
+outputs/**/*.json
 
 # ==========================================
-# Training / Experiment Artifacts
+# Logs
 # ==========================================
-
 *.log
-*.tmp
-*.temp
-
-# TensorBoard
-runs/
-tensorboard/
-.tb_logs/
+logs/
 
 # ==========================================
-# Jupyter
+# Temporary / Cache
 # ==========================================
-
-.ipynb_checkpoints/
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # ==========================================
 # OS Files
 # ==========================================
-
 .DS_Store
 Thumbs.db
-desktop.ini
 
-# Generated evaluation TIFFs
-outputs/**/*.tif
-outputs/**/*.tiff
+# Generated training patches
+data/patches/
 
-# Generated evaluation outputs
-outputs/evaluation/
+# Generated event data
+data/events/*.csv
+
+# Generated environmental/event data
+data/events/part1_event_groups.csv
+data/events/part1_product_groups.csv
+data/events/temporal_candidates_v2.csv
